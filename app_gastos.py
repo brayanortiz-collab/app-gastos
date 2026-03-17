@@ -50,6 +50,20 @@ try:
 except:
     df = pd.DataFrame(columns=["Fecha", "Tipo", "Categoría", "Monto", "Descripción"])
 
+# ---------------- FILTRO MENSUAL ----------------
+if not df.empty:
+    df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
+
+    mes_actual = pd.Timestamp.now().month
+    anio_actual = pd.Timestamp.now().year
+
+    df_mes = df[
+        (df["Fecha"].dt.month == mes_actual) &
+        (df["Fecha"].dt.year == anio_actual)
+    ]
+else:
+    df_mes = df
+
 # ---------------- FORMULARIO ----------------
 st.subheader("➕ Agregar movimiento")
 
@@ -75,13 +89,13 @@ with col2:
         st.rerun()
 
 # ---------------- MOSTRAR DATOS ----------------
-st.subheader("📊 Tus movimientos")
+st.subheader("📊 Tus movimientos (Mes actual)")
 
-if not df.empty:
-    st.dataframe(df)
+if not df_mes.empty:
+    st.dataframe(df_mes)
 
-    total_gastos = df[df["Tipo"] == "Gasto"]["Monto"].sum()
-    total_ingresos = df[df["Tipo"] == "Ingreso"]["Monto"].sum()
+    total_gastos = df_mes[df_mes["Tipo"] == "Gasto"]["Monto"].sum()
+    total_ingresos = df_mes[df_mes["Tipo"] == "Ingreso"]["Monto"].sum()
 
     st.metric("💸 Gastos", total_gastos)
     st.metric("💰 Ingresos", total_ingresos)
@@ -90,13 +104,13 @@ if not df.empty:
     st.subheader("📈 Análisis")
 
     try:
-        resumen = df.groupby("Categoría")["Monto"].sum()
+        resumen = df_mes.groupby("Categoría")["Monto"].sum()
         st.bar_chart(resumen)
     except:
         st.info("Agrega datos para ver gráficos")
 
 else:
-    st.info("Aún no hay datos registrados")
+    st.info("No hay datos este mes")
     total_gastos = 0
     total_ingresos = 0
 
@@ -108,30 +122,24 @@ if total_gastos > total_ingresos:
 else:
     st.success("Vas bien, tus finanzas están equilibradas ✅")
 
-# ---------------- PLAN DE AHORRO ----------------
-st.subheader("🎯 Plan de Ahorro")
+# ---------------- PLAN DE AHORRO (DESPLEGABLE) ----------------
+with st.expander("🎯 Ver Plan de Ahorro"):
 
-meta = st.number_input("¿Cuánto quieres ahorrar?", min_value=0, key="meta_ahorro")
+    meta = st.number_input("¿Cuánto quieres ahorrar?", min_value=0, key="meta_ahorro")
 
-ahorro_actual = total_ingresos - total_gastos
+    ahorro_actual = total_ingresos - total_gastos
 
-st.write(f"💰 Ahorro actual: {ahorro_actual}")
-st.write(f"🎯 Meta: {meta}")
+    st.write(f"💰 Ahorro actual: {ahorro_actual}")
+    st.write(f"🎯 Meta: {meta}")
 
-if meta > 0:
-    progreso = ahorro_actual / meta if meta != 0 else 0
+    if meta > 0:
+        progreso = ahorro_actual / meta if meta != 0 else 0
 
-    if progreso >= 1:
-        st.success("🎉 ¡Meta alcanzada!")
+        if progreso >= 1:
+            st.success("🎉 ¡Meta alcanzada!")
+        else:
+            st.progress(min(progreso, 1.0))
+            restante = meta - ahorro_actual
+            st.info(f"Te faltan {restante} para cumplir tu meta")
     else:
-        st.progress(min(progreso, 1.0))
-        restante = meta - ahorro_actual
-        st.info(f"Te faltan {restante} para cumplir tu meta")
-else:
-    st.info("Define una meta para comenzar")
-
-if not df.empty:
-    if total_gastos > total_ingresos:
-        st.error("Estás gastando más de lo que ganas ⚠️")
-    else:
-        st.success("Vas bien, tus finanzas están equilibradas ✅")
+        st.info("Define una meta para comenzar")
