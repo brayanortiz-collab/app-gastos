@@ -97,9 +97,38 @@ if not df.empty:
 
 else:
     st.info("Aún no hay datos registrados")
+    total_gastos = 0
+    total_ingresos = 0
 
 # ---------------- IA SIMPLE ----------------
 st.subheader("🤖 Asesor financiero")
+
+if total_gastos > total_ingresos:
+    st.error("Estás gastando más de lo que ganas ⚠️")
+else:
+    st.success("Vas bien, tus finanzas están equilibradas ✅")
+
+# ---------------- PLAN DE AHORRO ----------------
+st.subheader("🎯 Plan de Ahorro")
+
+meta = st.number_input("¿Cuánto quieres ahorrar?", min_value=0, key="meta_ahorro")
+
+ahorro_actual = total_ingresos - total_gastos
+
+st.write(f"💰 Ahorro actual: {ahorro_actual}")
+st.write(f"🎯 Meta: {meta}")
+
+if meta > 0:
+    progreso = ahorro_actual / meta if meta != 0 else 0
+
+    if progreso >= 1:
+        st.success("🎉 ¡Meta alcanzada!")
+    else:
+        st.progress(min(progreso, 1.0))
+        restante = meta - ahorro_actual
+        st.info(f"Te faltan {restante} para cumplir tu meta")
+else:
+    st.info("Define una meta para comenzar")
 
 if not df.empty:
     if total_gastos > total_ingresos:
