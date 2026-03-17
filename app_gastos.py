@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import json
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -30,7 +29,8 @@ if not st.session_state.login:
 # ---------- GOOGLE SHEETS ----------
 scope = ["https://www.googleapis.com/auth/spreadsheets"]
 
-creds_dict = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+creds_dict = st.secrets["GOOGLE_CREDENTIALS"]
+
 creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
 
 client = gspread.authorize(creds)
@@ -76,7 +76,7 @@ c2.metric("Ahorro", ahorro)
 c3.metric("Disponible", limite)
 c4.metric("Restante", restante)
 
-# ---------- NOTIFICACIONES INTELIGENTES ----------
+# ---------- NOTIFICACIONES ----------
 if total > limite:
     st.error("🚨 Te pasaste del presupuesto")
 elif total > limite * 0.8:
@@ -84,7 +84,7 @@ elif total > limite * 0.8:
 elif total < limite * 0.3:
     st.success("🔥 Vas excelente en tus gastos")
 
-# ---------- REGISTRO ----------
+# ---------- REGISTRAR ----------
 st.subheader("➕ Registrar gasto")
 
 col1,col2 = st.columns(2)
@@ -123,7 +123,7 @@ if not df.empty:
 
     st.dataframe(df)
 
-# ---------- IA SIMPLE (ASESOR) ----------
+# ---------- IA SIMPLE ----------
 st.subheader("🤖 Asesor financiero")
 
 if ingreso > 0:
@@ -136,6 +136,11 @@ if ingreso > 0:
     else:
         st.write("🔥 Excelente manejo financiero")
 
+# ---------- RESET ----------
+if st.button("🗑️ Reset"):
+    sheet.clear()
+    sheet.append_row(["Fecha","Categoria","Descripcion","Valor"])
+    st.rerun()
 # ---------- RESET ----------
 if st.button("🗑️ Reset"):
     sheet.clear()
