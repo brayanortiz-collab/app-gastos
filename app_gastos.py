@@ -3,30 +3,24 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 
-# ---------- CONFIG ----------
-st.set_page_config(page_title="D'ela", page_icon="logo.png", layout="wide")
+# ---------------- CONFIG ----------------
+st.set_page_config(page_title="D’ela 💜", layout="centered")
 
-# ---------- LOGIN SIMPLE ----------
-if "login" not in st.session_state:
-    st.session_state.login = False
+# ---------------- LOGO ----------------
+st.image("logo.png", width=120)
 
-if not st.session_state.login:
-    st.image("logo.png", width=120)
-    st.title("D’ela 💜")
+st.title("D’ela 💜")
+st.subheader("Tu app financiera inteligente")
 
-    user = st.text_input("Usuario")
-    password = st.text_input("Contraseña", type="password")
+# ---------------- LOGIN SIMPLE ----------------
+usuario = st.text_input("Usuario")
+password = st.text_input("Contraseña", type="password")
 
-    if st.button("Ingresar"):
-        if user == "daniela" and password == "1234":
-            st.session_state.login = True
-            st.rerun()
-        else:
-            st.error("Datos incorrectos")
-
+if usuario != "admin" or password != "1234":
+    st.warning("Ingresa usuario y contraseña")
     st.stop()
 
-# ---------- GOOGLE SHEETS ----------
+# ---------------- GOOGLE SHEETS ----------------
 scope = ["https://www.googleapis.com/auth/spreadsheets"]
 
 creds_dict = st.secrets["GOOGLE_CREDENTIALS"]
@@ -35,112 +29,73 @@ creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
 
 client = gspread.authorize(creds)
 
-sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/1ZYKTKT5E5GIBLa9FceWt3PgSx0eg04_EAwF2mUWiuMI/edit?gid=0#gid=0").sheet1
+sheet = client.open_by_url(
+    "https://docs.google.com/spreadsheets/d/1ZYKTKT5E5GIBLa9FceWt3PgSx0eg04_EAwF2mUWiuMI/edit?gid=0#gid=0"
+).sheet1
 
-data = sheet.get_all_records()
-
-if data:
+# ---------------- CARGAR DATOS ----------------
+try:
+    data = sheet.get_all_records()
     df = pd.DataFrame(data)
-else:
-    df = pd.DataFrame(columns=["Fecha","Categoria","Descripcion","Valor"])
+except:
+    df = pd.DataFrame(columns=["Fecha", "Tipo", "Categoría", "Monto", "Descripción"])
 
-# ---------- CATEGORIAS DINÁMICAS ----------
-if "categorias" not in st.session_state:
-    st.session_state.categorias = [
-        "Comida","Transporte","Entretenimiento","Otros"
-    ]
+# ---------------- FORMULARIO ----------------
+st.subheader("➕ Agregar movimiento")
 
-st.sidebar.header("⚙️ Configuración")
+fecha = st.date_input("Fecha")
+tipo = st.selectbox("Tipo", ["Gasto", "Ingreso"])
+categoria = st.text_input("Categoría")
+monto = st.number_input("Monto", min_value=0)
+descripcion = st.text_input("Descripción")
 
-nueva_cat = st.sidebar.text_input("Nueva categoría")
-
-if st.sidebar.button("Agregar categoría"):
-    if nueva_cat:
-        st.session_state.categorias.append(nueva_cat)
-        st.sidebar.success("Agregada")
-
-# ---------- FINANZAS ----------
-ingreso = st.sidebar.number_input("Ingreso mensual", min_value=0)
-ahorro = st.sidebar.number_input("Meta ahorro", min_value=0)
-
-limite = ingreso - ahorro
-total = df["Valor"].sum() if not df.empty else 0
-restante = limite - total
-
-# ---------- RESUMEN ----------
-st.title("💜 D’ela")
-
-c1,c2,c3,c4 = st.columns(4)
-c1.metric("Ingreso", ingreso)
-c2.metric("Ahorro", ahorro)
-c3.metric("Disponible", limite)
-c4.metric("Restante", restante)
-
-# ---------- NOTIFICACIONES ----------
-if total > limite:
-    st.error("🚨 Te pasaste del presupuesto")
-elif total > limite * 0.8:
-    st.warning("⚠️ Estás cerca del límite")
-elif total < limite * 0.3:
-    st.success("🔥 Vas excelente en tus gastos")
-
-# ---------- REGISTRAR ----------
-st.subheader("➕ Registrar gasto")
-
-col1,col2 = st.columns(2)
+# ---------------- BOTONES ----------------
+col1, col2 = st.columns(2)
 
 with col1:
-    fecha = st.date_input("Fecha")
-    categoria = st.selectbox("Categoría", st.session_state.categorias)
-
-with col2:
-    descripcion = st.text_input("Descripción")
-    valor = st.number_input("Valor", min_value=0)
-
-if st.button("Guardar"):
-    sheet.append_row([str(fecha), categoria, descripcion, valor])
-    st.success("Guardado 💜")
-    st.rerun()
-
-# ---------- GRAFICAS ----------
-if not df.empty:
-    st.subheader("📊 Análisis")
-
-    df["Valor"] = pd.to_numeric(df["Valor"])
-
-    st.bar_chart(df.groupby("Categoria")["Valor"].sum())
-    st.line_chart(df["Valor"])
-
-# ---------- HISTORIAL ----------
-if not df.empty:
-    st.subheader("📋 Historial")
-
-    fila = st.selectbox("Eliminar", df.index)
-
-    if st.button("Eliminar gasto"):
-        sheet.delete_rows(fila + 2)
+    if st.button("💾 Guardar", key="guardar_gasto"):
+        nueva_fila = [str(fecha), tipo, categoria, monto, descripcion]
+        sheet.append_row(nueva_fila)
+        st.success("Guardado correctamente")
         st.rerun()
 
+with col2:
+    if st.button("🗑️ Reset", key="reset_gastos"):
+        st.warning("Formulario limpiado")
+        st.rerun()
+
+# ---------------- MOSTRAR DATOS ----------------
+st.subheader("📊 Tus movimientos")
+
+if not df.empty:
     st.dataframe(df)
 
-# ---------- IA SIMPLE ----------
+    total_gastos = df[df["Tipo"] == "Gasto"]["Monto"].sum()
+    total_ingresos = df[df["Tipo"] == "Ingreso"]["Monto"].sum()
+
+    st.metric("💸 Gastos", total_gastos)
+    st.metric("💰 Ingresos", total_ingresos)
+
+    # ---------------- GRÁFICO ----------------
+    st.subheader("📈 Análisis")
+
+    try:
+        resumen = df.groupby("Categoría")["Monto"].sum()
+        st.bar_chart(resumen)
+    except:
+        st.info("Agrega datos para ver gráficos")
+
+else:
+    st.info("Aún no hay datos registrados")
+
+# ---------------- IA SIMPLE ----------------
 st.subheader("🤖 Asesor financiero")
 
-if ingreso > 0:
-    porcentaje = (ahorro / ingreso) * 100
-
-    if porcentaje < 10:
-        st.write("👉 Estás ahorrando muy poco, intenta subir al 20%")
-    elif porcentaje < 20:
-        st.write("👉 Buen inicio, puedes mejorar tu ahorro")
+if not df.empty:
+    if total_gastos > total_ingresos:
+        st.error("Estás gastando más de lo que ganas ⚠️")
     else:
-        st.write("🔥 Excelente manejo financiero")
-
-# ---------- RESET ----------
-if st.button("🗑️ Reset"):
-    sheet.clear()
-    sheet.append_row(["Fecha","Categoria","Descripcion","Valor"])
-    st.rerun()
+        st.success("Vas bien, tus finanzas están equilibradas ✅")
 # ---------- RESET ----------
 if st.button("🗑️ Reset"):
     sheet.clear()
