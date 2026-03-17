@@ -12,12 +12,22 @@ st.image("logo.png", width=120)
 st.title("D’ela 💜")
 st.subheader("Tu app financiera inteligente")
 
-# ---------------- LOGIN SIMPLE ----------------
+# ---------------- LOGIN ----------------
+st.subheader("🔐 Iniciar sesión")
+
 usuario = st.text_input("Usuario")
 password = st.text_input("Contraseña", type="password")
 
-if usuario != "admin" or password != "1234":
-    st.warning("Ingresa usuario y contraseña")
+if "login" not in st.session_state:
+    st.session_state.login = False
+
+if st.button("Ingresar", key="login_btn"):
+    if usuario == "admin" and password == "1234":
+        st.session_state.login = True
+    else:
+        st.error("Usuario o contraseña incorrectos")
+
+if not st.session_state.login:
     st.stop()
 
 # ---------------- GOOGLE SHEETS ----------------
@@ -96,8 +106,3 @@ if not df.empty:
         st.error("Estás gastando más de lo que ganas ⚠️")
     else:
         st.success("Vas bien, tus finanzas están equilibradas ✅")
-# ---------- RESET ----------
-if st.button("🗑️ Reset"):
-    sheet.clear()
-    sheet.append_row(["Fecha","Categoria","Descripcion","Valor"])
-    st.rerun()
