@@ -35,7 +35,7 @@ creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
 
 client = gspread.authorize(creds)
 
-sheet = client.open("Gastos Daniela").sheet1
+sheet = client.open("https://docs.google.com/spreadsheets/d/1ZYKTKT5E5GIBLa9FceWt3PgSx0eg04_EAwF2mUWiuMI/edit?gid=0#gid=0").sheet1
 
 data = sheet.get_all_records()
 
